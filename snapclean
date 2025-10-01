@@ -1,0 +1,34 @@
+#!/bin/bash
+#apache 2.0 license, remove disabled snaps and cache directory.
+#https://github.com/zuluechopapa/snapclean
+
+
+snapck=/var/lib/snapd
+before=`/usr/bin/df -H $snapck | grep "/dev"`
+me=`whoami`
+if [ "$me" != "root" ]
+then
+   echo must run with root privs
+   exit 6
+fi
+#cycle through all the 'disabled' snaps, get the revision info.
+for snap in `snap list --all | grep disabled \
+             | awk {'print "--revision="$3 ":" $1'}`
+do
+  rev=`echo $snap | cut -d: -f1` #break prevoious lines up
+  pak=`echo $snap | cut -d: -f2`
+  echo snap remove $rev $pak
+  /usr/bin/snap remove $rev $pak
+done
+
+#in my experience, the cache dir is often a bigger offender than 
+#disabled snaps.   
+#https://forum.snapcraft.io/t/is-if-safe-for-me-to-remove-cache-files/7641
+#says it's fine to remove these files.
+cmegs=`du -sm $snapck/cache | awk '{print $1}'`
+rm -f $snapck/cache/*
+
+after=`/usr/bin/df -H $snapck | grep "/dev"`
+
+echo before: $before
+echo after: $after
